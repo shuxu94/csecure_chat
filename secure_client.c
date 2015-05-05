@@ -1,11 +1,11 @@
 /*
- * chatserv.c - A Secure TFTP Chat Server
+ * chatserv.c - A Secure UDP Chat Server
  *
- * Course Name: 14:332:456-Network Centric Programming
+ * Course Name: 14:332:456 - Network Centric Programming
  * Final Project
  * Student Names: Matthew Chatten, Shu Xu, Chris Geraldpaulraj
  * 
- * This program implements a TFTP server able to securely accept and handle chat messages from multiple clients at once.
+ * This program implements a UDP server able to securely accept and handle chat messages from multiple clients at once.
  */
 
 #include <sys/socket.h>
