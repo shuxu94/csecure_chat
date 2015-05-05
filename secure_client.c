@@ -32,11 +32,11 @@ int main(int argc, char **argv)
 
 	struct sockaddr_in clientaddr; //built structure for client socket
 	bzero((char *) &clientaddr, sizeof(clientaddr));
-    clientaddr.sin_family = AF_INET; 
-    clientaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
-    clientaddr.sin_port = htons(0); //random port
+    	clientaddr.sin_family = AF_INET; 
+    	clientaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
+	 clientaddr.sin_port = htons(0); //random port
  
-    if(bind(fd, (struct sockaddr *)&clientaddr, sizeof(clientaddr)) < 0) //bind socket
+    	if(bind(fd, (struct sockaddr *)&clientaddr, sizeof(clientaddr)) < 0) //bind socket
 	{
 		perror("Bind failed.");
 		return 0;
@@ -44,9 +44,9 @@ int main(int argc, char **argv)
 
 	struct sockaddr_in serveraddr;git
 	bzero((char *) &serveraddr, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET; 
-    serveraddr.sin_addr.s_addr = htonl(INADDR_ANY); 
-    serveraddr.sin_port = htons(8080);
+    	serveraddr.sin_family = AF_INET; 
+	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY); 
+    	serveraddr.sin_port = htons(8080);
 
 	char* test = "Test message.\n";
 
