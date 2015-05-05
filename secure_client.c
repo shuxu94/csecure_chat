@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 	bzero((char *) &clientaddr, sizeof(clientaddr));
     	clientaddr.sin_family = AF_INET; 
     	clientaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
-	 clientaddr.sin_port = htons(0); //random port
+	clientaddr.sin_port = htons(0); //random port
  
     	if(bind(fd, (struct sockaddr *)&clientaddr, sizeof(clientaddr)) < 0) //bind socket
 	{
@@ -48,7 +48,9 @@ int main(int argc, char **argv)
 	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY); 
     	serveraddr.sin_port = htons(8080);
 
-	char* test = "Test message.\n";
+	printf("Enter a message to start.\n");
+	char test[512];
+	fgets(test, sizeof(test), stdin);
 
 	if(sendto(fd, test, strlen(test), 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) 
 	{ 
