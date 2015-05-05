@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 	while(1)
 	{
 		printf("Enter a message.\n");
-		char test[512];
+		char test[140];
 		if(fgets(test, sizeof(test), stdin) == NULL)
 		{
 			perror("Invalid message.");
@@ -104,7 +104,20 @@ void* readmess(void* parameters)
 	int sfd = p->cfd; //save values from struct to local variables
 	struct sockaddr_in saddr = p->servad;
 
+	char packet1[140];
+
 	printf("Entering thread. sfd: %d\n", sfd);
+
+	while(1)
+	{
+		if(recvfrom(sfd, packet1, sizeof(packet1), 0, (struct sockaddr*) &saddr, (socklen_t*) sizeof(saddr)) < 0)
+		{ 
+			perror("The recvfrom command failed."); 
+			return 0; 
+		}
+		
+		printf("%s\n", packet1);
+	}		
 
 	/*int rc;
 	if((rc = close(sfd)) < 0)
