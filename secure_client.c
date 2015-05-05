@@ -50,7 +50,11 @@ int main(int argc, char **argv)
 
 	printf("Enter a message to start.\n");
 	char test[512];
-	fgets(test, sizeof(test), stdin);
+	if(fgets(test, sizeof(test), stdin) == NULL)
+	{
+		perror("Invalid message.");
+		return 0;
+	}
 
 	if(sendto(fd, test, strlen(test), 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) 
 	{ 
