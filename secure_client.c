@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	struct sockaddr_in serveraddr;git
+	struct sockaddr_in serveraddr;
 	bzero((char *) &serveraddr, sizeof(serveraddr));
     	serveraddr.sin_family = AF_INET; 
 	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY); 
