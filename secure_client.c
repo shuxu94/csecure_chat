@@ -1,11 +1,11 @@
 /*
- * chatserv.c - A Secure UDP Chat Server
+ * secure_client.c - A Secure UDP Chat Client
  *
  * Course Name: 14:332:456 - Network Centric Programming
  * Final Project
  * Student Names: Matthew Chatten, Shu Xu, Chris Geraldpaulraj
  * 
- * This program implements a UDP server able to securely accept and handle chat messages from multiple clients at once.
+ * This program implements a UDP client able to securely accept and handle chat messages from multiple clients at once through a central server.
  */
 
 #include <sys/socket.h>
@@ -20,6 +20,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define MESSSIZE 256
+#define USERSIZE 30
 
 void* readmess(void* p);
 
@@ -60,7 +62,31 @@ int main(int argc, char **argv)
 	args.cfd = fd; //save file descriptor
 	args.servad = serveraddr; //save server address
 
-	pthread_t tid;
+	printf("Choose a username, using syntax: '/u username'.\n");
+	char username[USERSIZE];
+	if(fgets(username, sizeof(username), stdin) == NULL)
+	{
+		perror("Invalid message.");
+		return 0;
+	}
+
+	if(sendto(fd, username, strlen(username), 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) //send username to server
+	{ 
+		perror("The sendto command failed."); 
+		return 0; 
+	}
+
+	char packet2[MESSSIZE]; //receive confirmation of username and instructions
+	bzero(packet2, sizeof(packet2));
+	socklen_t addrlen = sizeof(serveraddr);
+	if(recvfrom(fd, packet2, sizeof(packet2), 0, (struct sockaddr*) &serveraddr, &addrlen) < 0)
+	{ 
+		perror("The recvfrom command failed."); 
+		return 0; 
+	}
+	printf("%s", packet2);
+
+	pthread_t tid; //create new thread to handle all messages from server from now on
 	int rc;
 	if((rc = pthread_create(&tid, NULL, readmess, &args)) != 0)
 	{
@@ -71,12 +97,13 @@ int main(int argc, char **argv)
 	{
 		perror("Failed to detach thread.");
 		return 0;
-	}
+	}		
 
-	while(1)
+	while(1) //loop to send new messages to server
 	{
-		printf("Enter a message.\n");
-		char test[140];
+		//printf("Enter a message.\n");
+		char test[MESSSIZE];
+		bzero(test, sizeof(test));
 		if(fgets(test, sizeof(test), stdin) == NULL)
 		{
 			perror("Invalid message.");
@@ -103,20 +130,22 @@ void* readmess(void* parameters)
 	struct threaddata* p = (struct threaddata*) parameters; //get pointer to struct
 	int sfd = p->cfd; //save values from struct to local variables
 	struct sockaddr_in saddr = p->servad;
+	socklen_t addrlen = sizeof(saddr);
 
 	char packet1[140];
 
 	printf("Entering thread. sfd: %d\n", sfd);
 
-	while(1)
+	while(1) //loop to receive messages from server
 	{
-		if(recvfrom(sfd, packet1, sizeof(packet1), 0, (struct sockaddr*) &saddr, (socklen_t*) sizeof(saddr)) < 0)
+		bzero(packet1, sizeof(packet1));		
+		if(recvfrom(sfd, packet1, sizeof(packet1), 0, (struct sockaddr*) &saddr, &addrlen) < 0)
 		{ 
 			perror("The recvfrom command failed."); 
 			return 0; 
 		}
 		
-		printf("%s\n", packet1);
+		printf("From server: %s", packet1);
 	}		
 
 	/*int rc;
@@ -128,3 +157,17 @@ void* readmess(void* parameters)
 
 	return NULL;
 }
+
+
+/*char username[USERSIZE];
+char *u = username;
+int bytesread;
+size_t usesize = USERSIZE;
+bytesread = getline(&u, &usesize, stdin);
+
+if(sendto(fd, username, bytesread, 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) 
+{ 
+	perror("The sendto command failed."); 
+	return 0; 
+}*/
+
