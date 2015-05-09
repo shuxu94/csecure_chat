@@ -115,6 +115,12 @@ int main(int argc, char **argv)
 			perror("The sendto command failed."); 
 			return 0; 
 		}
+
+		if(test[0] == '/' && test[1] == 'q')
+		{	
+			sleep(1); //wait for any message from server
+			break; //end endless loop and close program
+		}
 	}
 
 	return 0;
@@ -134,7 +140,7 @@ void* readmess(void* parameters)
 
 	char packet1[140];
 
-	printf("Entering thread. sfd: %d\n", sfd);
+	//printf("Entering thread. sfd: %d\n", sfd);
 
 	while(1) //loop to receive messages from server
 	{
