@@ -19,11 +19,11 @@ scanf("%d",&p);
 flag=prime(p); 
 if(flag==0) 
 { 
-    printf("TThat is an invalid p value!\n"); 
+    printf("That is an invalid p value!\n"); 
     getch(); 
     exit(1); 
 } 
-printf("\Enter a prime number q: \n"); 
+printf("Enter a prime number q: \n"); 
 scanf("%d",&q); 
 flag=prime(q); 
 if(flag==0||p==q) 
