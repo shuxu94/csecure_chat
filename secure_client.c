@@ -145,7 +145,7 @@ void* readmess(void* parameters)
 			return 0; 
 		}
 		
-		printf("From server: %s", packet1);
+		printf("%s", packet1);
 	}		
 
 	/*int rc;
@@ -164,10 +164,8 @@ char *u = username;
 int bytesread;
 size_t usesize = USERSIZE;
 bytesread = getline(&u, &usesize, stdin);
-
 if(sendto(fd, username, bytesread, 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) 
 { 
 	perror("The sendto command failed."); 
 	return 0; 
 }*/
-
