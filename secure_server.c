@@ -37,6 +37,7 @@ struct clientdata {
 	struct sockaddr_in cliad; //for address of client
 	socklen_t addrlen; //for size of client address
 	char username[USERSIZE]; //for client username
+	int connected; //tracks if connected or not
 };
 
 struct clientdata clientlist[CLIENTS];
@@ -85,17 +86,37 @@ int main(int argc, char **argv)
 
 		if(buf[0] == '/') 
 		{
+			int i;
+			int sendnum2;
+			for(i = 0; i < clientnum; i++) //check to see if this is new client
+			{
+				if(rmaddr.sin_port == clientlist[i].cliad.sin_port)
+				{
+					newclient = 0; //not a new client
+					sendnum2 = i; //save identity of client
+				}
+
+				//printf("%d\n%d\n", strlen(buf), strlen(clientlist[i].username));
+
+				if(!(strncmp(buf, clientlist[i].username, strlen(buf))))
+				{
+					printf("Received invalid username.\n"); //if username already used
+					char newuser[MESSSIZE]; //tell client to choose new one
+					bzero(newuser, sizeof(newuser));
+					char* test4 = "Username already in use. Please choose another.\n";
+					strncpy(newuser, test4, strlen(test4));
+					if(sendto(sockfd, newuser, strlen(newuser), 0, (struct sockaddr *) &rmaddr, addrlen) < 0) 
+					{ 
+						perror("The sendto command failed."); 
+						return 0; 
+					}
+					goto nextmessage;
+				}
+			}			
+	
 			if(buf[1] == 'u')
 			{
 				printf("Received username: %s", buf);
-
-				int i;
-				for(i = 0; i < clientnum; i++) //check to see if this is new client
-				{
-					if(rmaddr.sin_port == clientlist[i].cliad.sin_port)
-						newclient = 0;
-					//printf("%d %d\n", rmaddr.sin_port, clientlist[i].cliad.sin_port);
-				}
 
 				if(newclient == 1) //if new client, add to list of clients
 				{
@@ -103,18 +124,82 @@ int main(int argc, char **argv)
 					//NEED TO CHECK THAT USERNAME IS NOT ALREADY USED
 					clientlist[clientnum].cliad = rmaddr;
 					clientlist[clientnum].addrlen = addrlen;
+					clientlist[clientnum].connected = 1;
 	
 					clientnum++; //increase number of clients
-				}
+					if(clientnum > CLIENTS) //if too many clients
+					{	
+						char* fail = "Server shutting down.\n";
+					
+						/*struct sendinfo args1;
+						args1.clinum = CLIENTS+1; //need to send to all clients
+						strncpy(args1.message, fail, sizeof(fail));
 
-				char intro[MESSSIZE]; //send intro to new client
-				char* test = "Connected to server. Use /q to quit, type and press enter to chat.\n";
-				strncpy(intro, test, strlen(test));
-				if(sendto(sockfd, intro, strlen(intro), 0, (struct sockaddr *) &rmaddr, addrlen) < 0) 
+						pthread_t tid1;
+						int rc1;
+						if((rc1 = pthread_create(&tid1, NULL, sendmess, &args1)) != 0)
+						{
+							perror("Failed to create thread.");
+							return 0;
+						}
+						if((rc1 = pthread_detach(tid1)) != 0) //don't need to rejoin later
+						{
+							perror("Failed to detach thread.");
+							return 0;
+						}
+						sleep(1); //give chance to send out shutdown message*/
+						break;
+					}
+
+					char intro[MESSSIZE]; //send intro to new client
+					bzero(intro, sizeof(intro));
+					char* test = "Connected to server. Type and press enter to chat.\n Commands:\n Use '/u username' to change username.\n Use '/t username message' to send a direct message to another user.\n Use '/q' to quit.\n";
+					strncpy(intro, test, strlen(test));
+					if(sendto(sockfd, intro, strlen(intro), 0, (struct sockaddr *) &rmaddr, addrlen) < 0) 
+					{ 
+						perror("The sendto command failed."); 
+						return 0; 
+					}
+				}
+				else //otherwise, just change the client's username
+				{
+					strncpy(clientlist[sendnum2].username, buf, USERSIZE);
+					
+					char usechange[MESSSIZE]; //send intro to new client
+					bzero(usechange, sizeof(usechange));
+					char* test2 = "Username changed.\n";
+					strncpy(usechange, test2, strlen(test2));
+					if(sendto(sockfd, usechange, strlen(usechange), 0, (struct sockaddr *) &rmaddr, addrlen) < 0) 
+					{ 
+						perror("The sendto command failed."); 
+						return 0; 
+					}
+				}
+			}
+			else if(buf[1] == 'q')
+			{
+				printf("Received quit request: %s", buf);
+
+				clientlist[sendnum2].connected = 0; //set status of client to disconnected
+
+				char exiter[MESSSIZE]; //send exit message to client
+				bzero(exiter, sizeof(exiter));
+				char* test3 = "Disconnected.\n";
+				strncpy(exiter, test3, strlen(test3));
+				if(sendto(sockfd, exiter, strlen(exiter), 0, (struct sockaddr *) &rmaddr, addrlen) < 0) 
 				{ 
 					perror("The sendto command failed."); 
 					return 0; 
 				}
+				
+			}
+			else if(buf[1] == 't')
+			{
+				char* temp_ptr; //tracks location in buffer
+				char* bufcpy = (char*) buf;
+				
+				bufcpy = strtok_r((char*) buf, " ", &temp_ptr); //get only the username
+				printf("username grabbed: %s\n", buf);
 			}
 		}
 		else
@@ -154,6 +239,7 @@ int main(int argc, char **argv)
 				return 0;
 			}
 		}
+		nextmessage: if(0); //does nothing, just end of while loop
 	}
 }
 
@@ -174,7 +260,7 @@ void* sendmess(void* parameters)
 	int i;
 	for(i = 0; i < clientnum; i++)
 	{
-		if(i != sender) //don't send message back to client that sent it
+		if(i != sender && clientlist[i].connected != 0) //don't send message back to client that sent it
 		{
 			struct sockaddr_in cliad = clientlist[i].cliad;
 			socklen_t addrlen = clientlist[i].addrlen;
