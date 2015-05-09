@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 				{
 					if(rmaddr.sin_port == clientlist[i].cliad.sin_port)
 						newclient = 0;
+					//printf("%d %d\n", rmaddr.sin_port, clientlist[i].cliad.sin_port);
 				}
 
 				if(newclient == 1) //if new client, add to list of clients
@@ -120,21 +121,24 @@ int main(int argc, char **argv)
 		{
 			//buf[recvlen] = 0; //make last character in buff 0
 			printf("Received message: %s", buf);
-			int clientnum;
+			int sendnum;
 			char msg[MESSSIZE];
 			bzero(msg, sizeof(msg));
+
+			//printf("clientnum: %d\n", clientnum);
 
 			int i;
 			for(i = 0; i < clientnum; i++) //check to see what client sent message
 			{
-				if(rmaddr.sin_addr.s_addr == clientlist[i].cliad.sin_addr.s_addr)
-					clientnum = i;
+				if(rmaddr.sin_port == clientlist[i].cliad.sin_port)
+					sendnum = i;
+				//printf("%d %d\n", rmaddr.sin_port, clientlist[i].cliad.sin_port);
 			}
 
 			strncpy(msg, buf, strlen(buf)); //save message
 
 			struct sendinfo args;
-			args.clinum = clientnum;
+			args.clinum = sendnum;
 			strncpy(args.message, msg, sizeof(msg));
 
 			pthread_t tid;
@@ -159,6 +163,13 @@ void* sendmess(void* parameters)
 	int sender = p->clinum; //get identity of sending client
 	char mess[MESSSIZE];
 	strncpy(mess, p->message, sizeof(p->message)); //get message
+	char username[USERSIZE+MESSSIZE];
+	strncpy(username, clientlist[sender].username, strlen(clientlist[sender].username));
+	username[strlen(username)-1] = 0; //get rid of newline
+	//printf("username: %s\n", username);
+	char* addon = " says:\n";
+	strncat(username, addon, strlen(addon));
+	strncat(username, mess, MESSSIZE);
 
 	int i;
 	for(i = 0; i < clientnum; i++)
@@ -171,13 +182,16 @@ void* sendmess(void* parameters)
 
 			printf("sending to client: %d\n", i);
 		
-			if(sendto(sockfd, mess, strlen(mess), 0, (struct sockaddr *) &cliad, addrlen) < 0) 
+			if(sendto(sockfd, username, strlen(username), 0, (struct sockaddr *) &cliad, addrlen) < 0) 
 			{ 
 				perror("The sendto command failed."); 
 				return 0; 
 			}
 		}
 	}
+
+	bzero(mess, sizeof(mess));
+	bzero(username, sizeof(username));
 
 	return NULL;
 }
