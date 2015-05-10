@@ -43,8 +43,10 @@ struct clientdata {
 struct clientdata clientlist[CLIENTS];
 
 struct sendinfo {
-	int clinum;
-	char message[MESSSIZE];
+	int clinum; //tracks origin of message
+	char message[MESSSIZE]; //holds message
+	int mode; //0 means broadcast, 1 means direct message
+	int clidest; //tracks destination of message
 };
 
 int main(int argc, char **argv)
@@ -84,13 +86,13 @@ int main(int argc, char **argv)
 		recvlen = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *)&rmaddr, &addrlen);
 		printf("Received %d bytes\n", recvlen);
 
-		if(buf[0] == '/') 
+		if((buf[0] == '/') && (recvlen > 3)) 
 		{
 			int i;
 			int sendnum2;
 			for(i = 0; i < clientnum; i++) //check to see if this is new client
 			{
-				if(rmaddr.sin_port == clientlist[i].cliad.sin_port)
+				if(rmaddr.sin_port == clientlist[i].cliad.sin_port) //if old client
 				{
 					newclient = 0; //not a new client
 					sendnum2 = i; //save identity of client
@@ -198,11 +200,72 @@ int main(int argc, char **argv)
 				char* temp_ptr; //tracks location in buffer
 				char* bufcpy = (char*) buf;
 				
-				bufcpy = strtok_r((char*) buf, " ", &temp_ptr); //get only the username
-				printf("username grabbed: %s\n", buf);
+				bufcpy = strtok_r((char*) buf, " ", &temp_ptr); //get rid of /t
+				bufcpy = strtok_r(NULL, " ", &temp_ptr); //get only the username
+				printf("Username grabbed: %s\n", bufcpy);
+				char userfix[USERSIZE];
+				bzero(userfix, sizeof(userfix));
+				strncat(userfix, "/u ", sizeof(userfix)); //make username match stored one
+				strncat(userfix, bufcpy, sizeof(bufcpy));
+				strncat(userfix, "\n", sizeof(userfix));
+				//printf("test: %s\n", userfix);
+
+				int k;
+				for(k = 0; k < clientnum; k++) //check to see if username exists
+				{
+					//printf("%s %s\n%d %d\n", userfix, clientlist[k].username, strlen(userfix), strlen(clientlist[k].username));
+					if(strncmp(userfix, clientlist[k].username, strlen(clientlist[k].username)) == 0) //if it does
+					{
+						char mess2[MESSSIZE];
+						bzero(mess2, sizeof(mess2));
+						bufcpy = strtok_r(NULL, " ", &temp_ptr);					
+						while(bufcpy != NULL) //get full message into mess2
+						{
+							strcat(mess2, bufcpy);
+							bufcpy = strtok_r(NULL, " ", &temp_ptr);
+							if(bufcpy != NULL)
+								strcat(mess2, " ");
+						}
+
+						//printf("%s\n", mess2);		
+
+						//bufcpy = strtok_r(NULL, " ", &temp_ptr); //get only the message
+						struct sendinfo args2;
+						args2.clinum = sendnum2; //origin of message
+						strncpy(args2.message, mess2, sizeof(mess2)); //message
+						args2.mode = 1; //direct message
+						args2.clidest = k; //client to send to
+
+						pthread_t tid2;
+						int rc2;
+						if((rc2 = pthread_create(&tid2, NULL, sendmess, &args2)) != 0)
+						{
+							perror("Failed to create thread.");
+							return 0;
+						}
+						if((rc2 = pthread_detach(tid2)) != 0) //don't need to rejoin later
+						{
+							perror("Failed to detach thread.");
+							return 0;
+						}
+					}
+				}			
+			}
+			else //if invalid command sent
+			{
+				printf("Received invalid command.\n");
+				char badcom[MESSSIZE]; //tell client it was bad command
+				bzero(badcom, sizeof(badcom));
+				char* test6 = "Invalid command. Please try again.\n";
+				strncpy(badcom, test6, strlen(test6));
+				if(sendto(sockfd, badcom, strlen(badcom), 0, (struct sockaddr *) &rmaddr, addrlen) < 0) 
+				{ 
+					perror("The sendto command failed."); 
+					return 0; 
+				}
 			}
 		}
-		else
+		else if(clientnum > 0)
 		{
 			//buf[recvlen] = 0; //make last character in buff 0
 			printf("Received message: %s", buf);
@@ -223,8 +286,9 @@ int main(int argc, char **argv)
 			strncpy(msg, buf, strlen(buf)); //save message
 
 			struct sendinfo args;
-			args.clinum = sendnum;
-			strncpy(args.message, msg, sizeof(msg));
+			args.clinum = sendnum; //sending client
+			strncpy(args.message, msg, sizeof(msg)); //message
+			args.mode = 0; //broadcast to all clients
 
 			pthread_t tid;
 			int rc;
@@ -253,27 +317,52 @@ void* sendmess(void* parameters)
 	strncpy(username, clientlist[sender].username, strlen(clientlist[sender].username));
 	username[strlen(username)-1] = 0; //get rid of newline
 	//printf("username: %s\n", username);
-	char* addon = " says:\n";
-	strncat(username, addon, strlen(addon));
-	strncat(username, mess, MESSSIZE);
-
-	int i;
-	for(i = 0; i < clientnum; i++)
+	if(p->mode == 0)
 	{
-		if(i != sender && clientlist[i].connected != 0) //don't send message back to client that sent it
-		{
-			struct sockaddr_in cliad = clientlist[i].cliad;
-			socklen_t addrlen = clientlist[i].addrlen;
-			//char username[USERSIZE] = clientlist[i].username; //ADD TO MESSAGE
+		char* addon = " says:\n";
+		strncat(username, addon, strlen(addon));
+		strncat(username, mess, MESSSIZE);
 
-			printf("sending to client: %d\n", i);
+		int i;
+		for(i = 0; i < clientnum; i++)
+		{
+			if(i != sender && clientlist[i].connected != 0) //don't send message back to client that sent it
+			{
+				struct sockaddr_in cliad = clientlist[i].cliad; //get client info
+				socklen_t addrlen = clientlist[i].addrlen;
+
+				printf("Sending to client: %d\n", i);
 		
-			if(sendto(sockfd, username, strlen(username), 0, (struct sockaddr *) &cliad, addrlen) < 0) 
+				if(sendto(sockfd, username, strlen(username), 0, (struct sockaddr *) &cliad, addrlen) < 0) 
+				{ 
+					perror("The sendto command failed."); 
+					return 0; 
+				}
+			}
+		}
+	}
+
+	else if(p->mode == 1)
+	{
+		int reccli = p->clidest; //get identity of receiving client
+
+		//if((clientlist[reccli].connected == 0)) //if client is still connected
+		//{
+			char* addon = " says only to you:\n";
+			strncat(username, addon, strlen(addon));
+			strncat(username, mess, MESSSIZE);
+
+			struct sockaddr_in cliad1 = clientlist[reccli].cliad; //get client info
+			socklen_t addrlen1 = clientlist[reccli].addrlen;
+
+			printf("Sending to client: %d\n", reccli);
+
+			if(sendto(sockfd, username, strlen(username), 0, (struct sockaddr *) &cliad1, addrlen1) < 0) 
 			{ 
 				perror("The sendto command failed."); 
 				return 0; 
 			}
-		}
+		//}
 	}
 
 	bzero(mess, sizeof(mess));
