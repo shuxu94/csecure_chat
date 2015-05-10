@@ -62,11 +62,17 @@ int main(int argc, char **argv)
 	args.cfd = fd; //save file descriptor
 	args.servad = serveraddr; //save server address
 
-	printf("Choose a username, using syntax: '/u username'.\n");
+	printf("Choose a username (no spaces) using syntax: '/u username'.\n");
 	char username[USERSIZE];
 	if(fgets(username, sizeof(username), stdin) == NULL)
 	{
 		perror("Invalid message.");
+		return 0;
+	}
+
+	if((username[0] != '/') || (username[1] != 'u') || (username[2] != ' ')) //check message
+	{
+		printf("Invalid username.\n");
 		return 0;
 	}
 
@@ -138,7 +144,7 @@ void* readmess(void* parameters)
 	struct sockaddr_in saddr = p->servad;
 	socklen_t addrlen = sizeof(saddr);
 
-	char packet1[140];
+	char packet1[MESSSIZE];
 
 	//printf("Entering thread. sfd: %d\n", sfd);
 
