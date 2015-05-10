@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 		recvlen = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *)&rmaddr, &addrlen);
 		printf("Received %d bytes\n", recvlen);
 
-		if((buf[0] == '/') && (recvlen > 3)) 
+		if((buf[0] == '/') && (recvlen > 2)) 
 		{
 			int i;
 			int sendnum2;
@@ -123,7 +123,6 @@ int main(int argc, char **argv)
 				if(newclient == 1) //if new client, add to list of clients
 				{
 					strncpy(clientlist[clientnum].username, buf, USERSIZE);
-					//NEED TO CHECK THAT USERNAME IS NOT ALREADY USED
 					clientlist[clientnum].cliad = rmaddr;
 					clientlist[clientnum].addrlen = addrlen;
 					clientlist[clientnum].connected = 1;
@@ -131,7 +130,8 @@ int main(int argc, char **argv)
 					clientnum++; //increase number of clients
 					if(clientnum > CLIENTS) //if too many clients
 					{	
-						char* fail = "Server shutting down.\n";
+						char* fail = "Too many clients, server shutting down.\n";
+						printf("%s", fail);
 					
 						/*struct sendinfo args1;
 						args1.clinum = CLIENTS+1; //need to send to all clients
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
 				
 				bufcpy = strtok_r((char*) buf, " ", &temp_ptr); //get rid of /t
 				bufcpy = strtok_r(NULL, " ", &temp_ptr); //get only the username
-				printf("Username grabbed: %s\n", bufcpy);
+				//printf("Username grabbed: %s\n", bufcpy);
 				char userfix[USERSIZE];
 				bzero(userfix, sizeof(userfix));
 				strncat(userfix, "/u ", sizeof(userfix)); //make username match stored one
@@ -346,8 +346,8 @@ void* sendmess(void* parameters)
 	{
 		int reccli = p->clidest; //get identity of receiving client
 
-		//if((clientlist[reccli].connected == 0)) //if client is still connected
-		//{
+		if((clientlist[reccli].connected != 0)) //if client is still connected
+		{
 			char* addon = " says only to you:\n";
 			strncat(username, addon, strlen(addon));
 			strncat(username, mess, MESSSIZE);
@@ -362,7 +362,7 @@ void* sendmess(void* parameters)
 				perror("The sendto command failed."); 
 				return 0; 
 			}
-		//}
+		}
 	}
 
 	bzero(mess, sizeof(mess));
