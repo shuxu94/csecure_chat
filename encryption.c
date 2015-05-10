@@ -100,17 +100,19 @@ int do_evp_seal(FILE *rsa_pkey_file, char *in, char *out,
 }
 
 
-int do_evp_unseal(FILE *rsa_pkey_file, char *plaintext, char *ciphertext,
-                  int cipertext_len, struct encryption_key *key)
+int do_evp_unseal(FILE *rsa_pkey_file, char *plaintext, struct encryption_key *key)
 {
     int retval = 0;
     RSA *rsa_pkey = NULL;
     EVP_PKEY *pkey = EVP_PKEY_new();
     EVP_CIPHER_CTX ctx;
-
+    
+    int cipertext_len = key->cipertext_len;
+    char *ciphertext = key->ciphertext;
+    
     int len_out;
     int plaintext_len;
-
+    
     
     if (!PEM_read_RSAPrivateKey(rsa_pkey_file, &rsa_pkey, NULL, NULL))
     {
@@ -170,7 +172,7 @@ int main(int argc, char *argv[])
 {
     FILE *rsa_pkey_file;
     int rv;
-    char *in = "sdfaisudh dfdsfsd fiuashdfius\n";
+    char *in = "encryption worksss dsfsdfs\n";
     char ciphertext[1000];
     struct encryption_key key;
     
@@ -201,9 +203,9 @@ int main(int argc, char *argv[])
     
     secret_key_file = fopen("private.pem", "rb");
     
-    drv = do_evp_unseal(secret_key_file, plaintext, key.ciphertext, key.cipertext_len, &key);
+    drv = do_evp_unseal(secret_key_file, plaintext, &key);
     
-    printf("%s", plaintext, drv);
+    printf("%s\n size: %d \n", plaintext, drv);
     
     
     
