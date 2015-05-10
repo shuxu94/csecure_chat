@@ -197,16 +197,27 @@ int main(int argc, char *argv[])
     
     fclose(rsa_pkey_file);
     
+    /* serialization */
+    unsigned char *serialized_key;
+    printf("encrypted key size: %d\n", sizeof(key));
+    serialized_key = (unsigned char *)malloc(sizeof(key));
+    memcpy(serialized_key, &key, sizeof(key));
+    
+    /* deserialize */
+    struct encryption_key newkey;
+    memcpy(&newkey, serialized_key, sizeof(key));
+    
     FILE *secret_key_file;
     char plaintext[100];
     int drv;
     
     secret_key_file = fopen("private.pem", "rb");
     
-    drv = do_evp_unseal(secret_key_file, plaintext, &key);
+    drv = do_evp_unseal(secret_key_file, plaintext, &newkey);
     
     printf("%s\n size: %d \n", plaintext, drv);
     
+    fclose(secret_key_file);
     
     
     return rv;
