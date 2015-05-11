@@ -2,4 +2,3 @@ Todo:
 
 1. Implement encrpytion for server-client communcation.
 2. Implement mutexes for making threads safe
-3. Implement direct user to user messages
